@@ -1,0 +1,14 @@
+# Arduino build files
+build/
+*.o
+*.a
+*.d
+*.eep
+*.elf
+*.hex
+*.lss
+*.map
+*.sym
+
+# Local configuration
+*.local
