@@ -1,17 +1,13 @@
+#include "project_config.h"
 #include "rotary_encoder.h"
 #include "temperature_sensor.h"
 
-#define steps 4
-#define maxTemp 85
-#define minTemp 60
-#define startTemp 70
-
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(SERIAL_BAUD_RATE);
   Serial.println(F("Thermostat CLI Test..."));
-  setupTemperatureSensor();
-  setupEncoder();
-  configureEncoder(startTemp, minTemp, maxTemp, steps);
+  setupTemperatureSensor(TEMP_SENSOR_PIN, TEMP_SENSOR_TYPE, TEMP_READ_INTERVAL);
+  setupEncoder(ENCODER_SW_PIN, ENCODER_DT_PIN, ENCODER_CLK_PIN);
+  configureEncoder(TARGET_TEMP_START, TARGET_TEMP_MIN, TARGET_TEMP_MAX, ENCODER_STEPS_PER_CLICK);
 }
 
 void loop() {
