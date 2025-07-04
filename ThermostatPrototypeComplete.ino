@@ -2,6 +2,8 @@
 #include "rotary_encoder.h"
 #include "temperature_sensor.h"
 
+#define REFRESH_INTERVAL 5000UL
+
 void setup() {
   Serial.begin(SERIAL_BAUD_RATE);
   Serial.println(F("Thermostat CLI Test..."));
@@ -11,17 +13,27 @@ void setup() {
 }
 
 void loop() {
+  // Define state variables
   static long lastTargetTemp = 0;
+  static unsigned long lastDisplayUpdateTime = 0;
 
+  // Get all current hardware variables
   float currentTemp = getTemperature();
-  long targetTemp = getEncoderPosition();
+  long currentTargetTemp = getEncoderPosition();
+  unsigned long currentTime = millis();
 
-  if (targetTemp != lastTargetTemp) {
-    Serial.print(F("Room:"));
+  // Check for state change
+  bool targetChanged = (currentTargetTemp != lastTargetTemp);
+  bool timeToRefresh = (currentTime - lastDisplayUpdateTime >= REFRESH_INTERVAL);
+
+  // Print to screen if state has changed or refresh time reached
+  if (targetChanged || timeToRefresh) {
+    Serial.print(F("Room Temp:"));
     Serial.print(currentTemp, 1);
     Serial.print(F(" F | Target: "));
-    Serial.print(targetTemp);
+    Serial.print(currentTargetTemp);
     Serial.println(F(" F"));
-    lastTargetTemp = targetTemp;
+    lastTargetTemp = currentTargetTemp;
+    lastDisplayUpdateTime = currentTime;
   }
 }
