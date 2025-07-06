@@ -14,8 +14,8 @@ static void _writeToHardware(long rawValue);
 static Encoder *encoder = nullptr;
 
 // Encoder raw limit values
-static long g_rawEncoderMin = -2147483648;
-static long g_rawEncoderMax = 2147483647;
+static long g_rawEncoderMin = LONG_MIN;
+static long g_rawEncoderMax = LONG_MAX;
 
 // Encoder limit enabled flag (true = limits are enabled)
 static bool g_limitsEnabled = false;

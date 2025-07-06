@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <Encoder.h>
+#include <limits.h>
 
 // =================================================================
 // ---                 PUBLIC API FUNCTIONS                      ---
