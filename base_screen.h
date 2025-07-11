@@ -1,6 +1,8 @@
 #ifndef BASE_SCREEN_H
 #define BASE_SCREEN_H
 
+#include <LiquidCrystal.h>
+struct DisplayContext;
 
 class BaseScreen {
 public:
@@ -11,7 +13,7 @@ public:
       *       MUST provide its own implementation of this function. The "= 0" is what
       *       makes it pure virtual and makes BaseScreen an abstract class.
       */
-    virtual void draw() = 0;
+    virtual void draw(const DisplayContext& context) = 0;
 
     /**
      * @brief A virtual destructor.
@@ -20,6 +22,6 @@ public:
      *       with pointers. It's a critical piece of boilerplate for safe polymorphism.
      */
     virtual ~BaseScreen() {}
-}
+};
 
 #endif

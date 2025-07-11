@@ -2,6 +2,7 @@
 #define DASHBOARD_SCREEN_H
 
 #include "base_screen.h"
+#include <LiquidCrystal.h>
 
 class DashboardScreen : public BaseScreen {
 public:
@@ -17,14 +18,8 @@ public:
      *        exact same signature: no arguments and returns void. The 'override'
      *        keyword is a safety check that tells the compiler to verify this.
      */
-    void draw() override;
+    virtual void draw(const DisplayContext& context) override;
 
-    /**
-     * @brief A public function to give the screen the latest data from the main loop.
-     * @param currentTemp The current temperature to be stored.
-     * @param targetTemp The current target temperature to be stored.
-     */
-    void setData(float currentTemp, long targetTemp);
 
 private:
 
@@ -39,7 +34,7 @@ private:
      */
     float m_currentTemp;
     long m_targetTemp;
-}
+};
 
 
 #endif

@@ -13,13 +13,17 @@
 #define TEMP_SENSOR_PIN 13 // Data pin for DHT sensor
 #define TEMP_SENSOR_TYPE DHT11 // Type of DHT sensor (DHT11, DHT22, etc.)
 
-// LCD PINS
-#define
-#define
-#define
-#define
-#define
-#define
+// =================================================================
+// --- DISPLAY SETTINGS ---
+// =================================================================
+#define LCD_RS_PIN 12
+#define LCD_ENABLE_PIN 11
+#define LCD_D4_PIN 5
+#define LCD_D5_PIN 6
+#define LCD_D6_PIN 7
+#define LCD_D7_PIN 8
+#define LCD_COLUMNS 16
+#define LCD_ROWS 2
 
 // =================================================================
 // --- THERMOSTAT SETTINGS ---
