@@ -22,7 +22,8 @@ public:
 
 
 private:
-
+    // Helper function to print the initial layour of the dashboard screen
+    void printInitialLayout();
     /**
      * @brief A reference to the single, shared LCD object. This screen does not
      *        own the LCD; it just holds a "link" to it.
@@ -34,6 +35,10 @@ private:
      */
     float m_currentTemp;
     long m_targetTemp;
+    // State variables to remember what was on the screen
+    float m_lastDisplayedTemp;
+    long m_lastDisplayedTarget;
+    bool m_firstDraw; // Flag to know when to print the static layout
 };
 
 
