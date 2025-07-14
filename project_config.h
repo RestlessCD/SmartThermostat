@@ -38,6 +38,7 @@
 #define ENCODER_STEPS_PER_CLICK 4 // Raw steps per single "click" of encoder knob (typically 4 means the encoder moves 1 value per click)
 #define TEMP_READ_INTERVAL 2000UL // Milliseconds between temperature sensor reads (UL for unsigned long)
 #define SERIAL_BAUD_RATE 9600 // For serial monitor communication
+#define DISPLAY_REFRESH_INTERVAL 5000UL
 
 
 #endif

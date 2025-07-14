@@ -4,10 +4,11 @@
 #include "display_context.h"
 #include "display_manager.h"
 
-#define REFRESH_INTERVAL 5000UL
-
 // Create display context object for passing data to the screen module
 DisplayContext g_displayContext;
+
+// Create temperature sensor object
+TemperatureSensor g_tempSensor(TEMP_SENSOR_PIN, TEMP_SENSOR_TYPE);
 
 // Create display manager for managing different display screens
 DisplayManager g_displayManager(LCD_RS_PIN, LCD_ENABLE_PIN, LCD_D4_PIN, LCD_D5_PIN, LCD_D6_PIN, LCD_D7_PIN, LCD_COLUMNS, LCD_ROWS);
@@ -15,11 +16,11 @@ DisplayManager g_displayManager(LCD_RS_PIN, LCD_ENABLE_PIN, LCD_D4_PIN, LCD_D5_P
 void setup() {
   Serial.begin(SERIAL_BAUD_RATE);
   Serial.println(F("Initializing Display..."));
-  g_displayManager.begin();
+  g_displayManager.begin(); // Initialize display manager
   Serial.println(F("Display Initialized. Initializing sensors..."));
-  setupTemperatureSensor(TEMP_SENSOR_PIN, TEMP_SENSOR_TYPE, TEMP_READ_INTERVAL);
+  g_tempSensor.begin(TEMP_READ_INTERVAL); // Initialize temperature sensor with refresh rate
   setupEncoder(ENCODER_SW_PIN, ENCODER_DT_PIN, ENCODER_CLK_PIN);
-  configureEncoder(TARGET_TEMP_START, TARGET_TEMP_MIN, TARGET_TEMP_MAX, ENCODER_STEPS_PER_CLICK);
+  configureEncoder(TARGET_TEMP_START, TARGET_TEMP_MIN, TARGET_TEMP_MAX, ENCODER_STEPS_PER_CLICK); // Configure encoder limits and steps
   Serial.println(F("System setup complete. Ready for program main loop."));
 }
 
@@ -29,7 +30,7 @@ void loop() {
   static unsigned long lastDisplayUpdateTime = 0;
 
   // Assign current temperature and target temperature to the context object
-  g_displayContext.currentTemp = getTemperature();
+  g_displayContext.currentTemp = g_tempSensor.getTemperature();
   g_displayContext.targetTemp = getEncoderPosition();
   g_displayContext.humidity = 0.0f;
 
@@ -38,7 +39,7 @@ void loop() {
 
   // Check for state change
   bool targetChanged = (g_displayContext.targetTemp != lastTargetTemp);
-  bool timeToRefresh = (currentTime - lastDisplayUpdateTime >= REFRESH_INTERVAL);
+  bool timeToRefresh = (currentTime - lastDisplayUpdateTime >= DISPLAY_REFRESH_INTERVAL);
 
   // Print to screen if state has changed or refresh time reached
   if (targetChanged || timeToRefresh) {
