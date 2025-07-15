@@ -1,130 +1,170 @@
 #include "rotary_encoder.h"
 
-// === Private Helper Function Declarations (Forward Declarations) ===
-static long _logicalToRaw(long logicalValue);
-static long _rawToLogical(long rawValue);
-static long _enforceLimits(long rawValue);
-static long _readFromHardware();
-static void _writeToHardware(long rawValue);
+// Debouncing delay for encoder button
+#define DEBOUNCE_DELAY 50 // 50 milliseconds
 
+RotaryEncoder::RotaryEncoder(uint8_t clkPin, uint8_t dtPin, uint8_t swPin) 
+    : m_clkPin(clkPin),
+      m_dtPin(dtPin),
+      m_swPin(swPin),
+      m_encoder(nullptr),
+      m_limitsEnabled(false),
+      m_stepValue(1),
+      m_rawMin(LONG_MIN),
+      m_rawMax(LONG_MAX),
+      m_lastDebounceTime(0),
+      m_lastButtonState(HIGH),
+      m_buttonState(HIGH) {
 
-// === Private State Variables ===
-
-// Rotary encoder object pointer
-static Encoder *encoder = nullptr;
-
-// Encoder raw limit values
-static long g_rawEncoderMin = LONG_MIN;
-static long g_rawEncoderMax = LONG_MAX;
-
-// Encoder limit enabled flag (true = limits are enabled)
-static bool g_limitsEnabled = false;
-
-// Encoder step value (defaults to 1, encoder typically moves 4 times per click, so 4 is a good value if you want it to move 1 value per click)
-static int g_stepValue = 1;
-
-
-// === Public API Functions ===
-
-// Setup rotary encoder function
-void setupEncoder(uint8_t swpin, uint8_t dtpin, uint8_t clkpin) {
-  // Check for existing encoder object
-  if (encoder != nullptr) return;
-
-  // Configure switch pin
-  pinMode(swpin, INPUT_PULLUP);
-
-  // Create new encoder object with paramaters
-  encoder = new Encoder(dtpin, clkpin);
 }
+
+
+void RotaryEncoder::begin() {
+  // Set pinmode for the arduino
+  pinMode(m_swPin, INPUT_PULLUP);
+
+  // Create Encoder object and give ownership to smart pointer
+  m_encoder = new Encoder(m_dtPin, m_clkPin);
+}
+
 
 // CONFIGURE ENCODER FUNCTIONS
 
-// Configure encoder master function
-void configureEncoder(long start_logical, long min_logical, long max_logical, int steps) {
-  if (encoder == nullptr) return; // Check for valid object
-  
-  g_stepValue = (steps == 0) ? 1 : steps; // Set step value
-  g_limitsEnabled = true; // Enable limits
+
+// Encoder configure master function
+void RotaryEncoder::configure(long startLogical, long minLogical, long maxLogical, int steps) {
+  if (!m_encoder) return;
+
+  m_stepValue = (steps == 0) ? 1 : steps; // Set step value
+  m_limitsEnabled = true; // Enable limits
 
   // Convert logical values to internal raw values
-  g_rawEncoderMin = _logicalToRaw(min_logical);
-  g_rawEncoderMax = _logicalToRaw(max_logical);
+  m_rawMin = m_logicalToRaw(minLogical);
+  m_rawMax = m_logicalToRaw(maxLogical);
 
   // Set starting position of encoder with limits enforced
-  _writeToHardware(_enforceLimits(_logicalToRaw(start_logical)));
+  m_writeToHardware(m_enforceLimits(m_logicalToRaw(startLogical)));
 }
 
-// Three paramater configuration overloaded function
-void configureEncoder(long start_logical, long min_logical, long max_logical) {
+// Three paramater overloaded function
+void RotaryEncoder::configure(long startLogical, long minLogical, long maxLogical) {
   // Call encoder master function
-  configureEncoder(start_logical, min_logical, max_logical, g_stepValue);
+  configure(startLogical, minLogical, maxLogical, m_stepValue);
 }
 
-// Two paramater configuration overloaded function
-void configureEncoder(long min_logical, long max_logical) {
-  if (encoder == nullptr) return;
+// Two parameter overloaded function
+void RotaryEncoder::configure(long minLogical, long maxLogical) {
+  if (!m_encoder) return;
 
-  // Current logical for passing to master function
-  long currentLogical = _rawToLogical(_readFromHardware());
+  // Get current logical position for passing to master function
+  long currentLogical = m_rawToLogical(m_readFromHardware());
 
   // Call master function
-  configureEncoder(currentLogical, min_logical, max_logical, g_stepValue);
+  configure(currentLogical, minLogical, maxLogical, m_stepValue);
 }
 
-// Set rotary encoder to position
-void setEncoderPosition(long logicalPosition) {
-  if (encoder == nullptr) return;
+// Set encoder position function
+void RotaryEncoder::setPosition(long logicalPosition) {
+  if (!m_encoder) return;
+
 
   // Set encoder position
-  _writeToHardware(_enforceLimits(_logicalToRaw(logicalPosition)));
+  m_writeToHardware(m_enforceLimits(m_logicalToRaw(logicalPosition)));
 }
 
-// Get rotary encoder position
-long getEncoderPosition() {
-  if (encoder == nullptr) return 0;
-  
+// Get encoder position function
+long RotaryEncoder::getPosition() {
+  if (!m_encoder) return -1;
+
   // Read raw value from hardware
-  long rawPos = _readFromHardware();
+  long rawPos = m_readFromHardware();
 
   // Pass raw value through limit filter
-  long correctedRawPos = _enforceLimits(rawPos);
+  long correctedRawPos = m_enforceLimits(rawPos);
 
   // Correct position if hardware position has drifted out of limits
   if (rawPos != correctedRawPos) {
-    _writeToHardware(correctedRawPos);
+    m_writeToHardware(correctedRawPos);
   }
 
-  return _rawToLogical(correctedRawPos);
+  return m_rawToLogical(correctedRawPos);
 }
 
-// Converts logical values into raw stepped values
-static long _logicalToRaw(long logicalValue) {
-  return logicalValue * g_stepValue;
+// Disable limits function
+void RotaryEncoder::disableLimits() {
+  // Set limits
+  m_limitsEnabled = false;
+  m_rawMin = LONG_MIN;
+  m_rawMax = LONG_MAX;
 }
 
-// Converts raw stepped values into logical values
-static long _rawToLogical(long rawValue) {
-  return rawValue / g_stepValue;
+// Button press function
+bool RotaryEncoder::getButtonState() {
+  // Read raw state of the switch
+  bool reading = digitalRead(m_swPin);
+
+  // Check if state has changed since last check
+  if (reading != m_lastButtonState) {
+    // Reset debouncing timer
+    m_lastDebounceTime = millis();
+  }
+
+  // Check if state has been stable for longer than our debouncing delay
+  if ((millis() - m_lastDebounceTime) > DEBOUNCE_DELAY) {
+    // If state has been stable, update official button state
+    if (reading != m_buttonState) {
+      m_buttonState = reading;
+      // We could add logic here for "on press" or "on release" events if needed later.
+    }
+  }
+
+  // Update last raw state for loop
+  m_lastButtonState = reading;
+
+  // Return official debounced state
+  // Using INPUT_PULLUP, LOW means pressed
+  return (m_buttonState == LOW);
+}
+
+// --- Destructor ---
+// This is called automatically when the RotaryEncoder object goes out of scope,
+// ensuring that the memory we allocated with 'new' in the begin() method
+// is properly freed.
+RotaryEncoder::~RotaryEncoder() {
+  // Deletes encoder object when class is destroyed to prevent memory leaks
+  delete m_encoder;
+}
+
+
+// PRIVATE HELPER FUNCTIONS //
+
+// Converts logical values to raw values
+long RotaryEncoder::m_logicalToRaw(long logicalValue) {
+  return logicalValue * m_stepValue;
+}
+
+// Converts raw values to logical values
+long RotaryEncoder::m_rawToLogical(long rawValue) {
+  return rawValue / m_stepValue;
 }
 
 // Enforces limits and returns a corrected, valid raw value
-static long _enforceLimits(long rawValue) {
-  if (g_limitsEnabled) {
-    if (rawValue < g_rawEncoderMin) return g_rawEncoderMin;
-    if (rawValue > g_rawEncoderMax) return g_rawEncoderMax;
+long RotaryEncoder::m_enforceLimits(long rawValue) {
+  if (m_limitsEnabled) {
+    if (rawValue < m_rawMin) return m_rawMin;
+    if (rawValue > m_rawMax) return m_rawMax;
   }
   return rawValue;
 }
 
-// Reads raw positonal data from the rotary encoder and returns it as a raw stepped value
-static long _readFromHardware() {
-  if (encoder == nullptr) return -999;
-  return encoder->read();
+// Reads raw positional data from rotary encoder and returns it
+long RotaryEncoder::m_readFromHardware() {
+  if (!m_encoder) return -999;
+  return m_encoder->read();
 }
 
-// Writes positional data to the rotary encoder as a raw stepped value
-static void _writeToHardware(long rawValue) {
-  if (encoder == nullptr) return;
-  encoder->write(rawValue);
+// Writes raw positional data to the rotary encoder
+void RotaryEncoder::m_writeToHardware(long rawValue) {
+  if (!m_encoder) return;
+  return m_encoder->write(rawValue);
 }
